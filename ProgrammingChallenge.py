@@ -1,6 +1,6 @@
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import accuracy_score
 
@@ -18,45 +18,43 @@ data.drop('Unnamed: 0', axis=1, inplace=True)
 X = data.drop(['y'], axis=1)
 y = data['y']
 
-# Split the data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
-
 # Standardize features by removing the mean and scaling to unit variance
 scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
+X_scaled = scaler.fit_transform(X)
 
-# Create KNN model
-k = 5  # Number of neighbors to consider
-knn_model = KNeighborsClassifier(n_neighbors=k)
+# Create RandomForestClassifier
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
 
-# Fit the model
-knn_model.fit(X_train_scaled, y_train)
+# Perform cross-validation
+cv_scores = cross_val_score(rf_model, X_scaled, y, cv=5)  # 5-fold cross-validation
 
-# Predict on the test set
-y_pred = knn_model.predict(X_test_scaled)
+# Print cross-validation scores
+print("Cross-Validation Scores:", cv_scores)
+print("Mean CV Accuracy:", cv_scores.mean())
 
-# Evaluate the model
-accuracy = accuracy_score(y_test, y_pred)
-print("Accuracy:", accuracy)
+# Train the model on the entire dataset
+rf_model.fit(X_scaled, y)
 
+# Optionally, you can evaluate the model on a holdout test set
+# X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.25, random_state=42)
+# y_pred = rf_model.predict(X_test)
+# accuracy = accuracy_score(y_test, y_pred)
+# print("Accuracy on Test Set:", accuracy)
 
 # Load the evaluation dataset
 eval_data = pd.read_csv('EvaluateOnMe.csv')
 
 # Convert x7 to numerical using Label Encoding
-label_encoder = LabelEncoder()
-eval_data['x7'] = label_encoder.fit_transform(eval_data['x7'])
+eval_data['x7'] = label_encoder.transform(eval_data['x7'])
 
 # Drop the unnecessary column
 eval_data.drop('Unnamed: 0', axis=1, inplace=True)
 
 # Standardize features by removing the mean and scaling to unit variance
-scaler = StandardScaler()
-eval_data_scaled = scaler.fit_transform(eval_data)
+eval_data_scaled = scaler.transform(eval_data)
 
-# Make predictions using the trained model (assuming it's already trained)
-y_pred_eval = knn_model.predict(eval_data_scaled)  # Using the KNN model from the previous example
+# Make predictions using the trained model
+y_pred_eval = rf_model.predict(eval_data_scaled)
 
 # Write the predictions to result.txt
 with open('result.txt', 'w') as f:
